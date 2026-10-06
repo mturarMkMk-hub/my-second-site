@@ -195,19 +195,10 @@ function applyParsed(questions, sourceName) {
 
 /* ---------- 4. ПАРСЕР (версия с поддержкой переносов строк) ---------- */
 
-/*
-  Как это работает:
-  1. Текст чистится (мусор PDF, номера страниц) и режется на БЛОКИ по нумерации: 1. / 2. / 3.
-  2. Внутри блока ищем 5 частей: вопрос + 4 варианта. Два способа:
-     А) по кавычкам: "вопрос" "вариант 1" ... — самый надёжный, переносы внутри кавычек не мешают;
-     Б) если кавычек нет — по раскладке строк (пустые строки, длина строки, знаки препинания).
-  3. Строки внутри каждой части склеиваются обратно (с учётом переносов слов через дефис).
-*/
-
-// Начало вопроса: «12.» или «12)». Не срабатывает на «3.5 кг» (после точки не должно идти число)
+// Начало вопроса: «12.» или «12)». Не срабатывает на «3.5 кг»
 const START_RE = /^(["«“„]?)\s*(\d{1,4})\s*[.)](?!\d)\s*(.*)$/;
 
-// Строки-мусор от PDF: «- 5 -», «Страница 5», «Стр. 5 из 20». Если в PDF есть другие колонтитулы — добавьте сюда
+// Строки-мусор от PDF
 const PAGE_NOISE_RE = /^(?:[-–—]\s*\d+\s*[-–—]|(?:страница|стр\.?|page)\s*\d+(?:\s*(?:из|of)\s*\d+)?)$/i;
 
 // Открывающая кавычка → допустимые закрывающие
@@ -237,17 +228,16 @@ function parseQuestions(raw) {
 }
 
 /* ----- Шаг 1. Подготовка строк ----- */
-// Пустые строки сохраняем (одной), они помогают определять границы абзацев
 function prepareLines(raw) {
   const out = [];
   raw
     .replace(/\r/g, '')
-    .replace(/[\u00A0\u2007\u202F]/g, ' ')              // неразрывные пробелы
-    .replace(/[\u00AD\u200B-\u200D\uFEFF]/g, '')        // мягкие переносы, невидимые символы
+    .replace(/[\u00A0\u2007\u202F]/g, ' ')
+    .replace(/[\u00AD\u200B-\u200D\uFEFF]/g, '')
     .split('\n')
     .forEach((l) => {
       const t = l.replace(/\s+/g, ' ').trim();
-      if (PAGE_NOISE_RE.test(t)) return;                // номера страниц выбрасываем
+      if (PAGE_NOISE_RE.test(t)) return;
       if (!t) {
         if (out.length && out[out.length - 1] !== '') out.push('');
         return;
@@ -257,7 +247,6 @@ function prepareLines(raw) {
   return out;
 }
 
-// Примерная «ширина колонки» в символах: по ней отличаем строки-переносы (они почти полные)
 function estimateWrapWidth(lines) {
   const lens = lines.filter(Boolean).map((l) => l.length).sort((a, b) => a - b);
   if (!lens.length) return 60;
@@ -275,20 +264,19 @@ function splitIntoBlocks(lines) {
     if (m) {
       const num = parseInt(m[2], 10);
       const filled = cur ? cur.lines.filter(Boolean).length : 0;
-      const isNext = num === lastNum + 1;                 // номер идёт по порядку
-      const isSkip = num > lastNum && filled >= 5;        // пропущен номер, но предыдущий блок уже полный
+      const isNext = num === lastNum + 1;
+      const isSkip = num > lastNum && filled >= 5;
 
       if (!cur || isNext || isSkip) {
         cur = { num, lines: [] };
         blocks.push(cur);
         lastNum = num;
-        // m[1] — кавычка перед номером (если была), возвращаем её в текст
         const rest = (m[1] + m[3]).trim();
         if (rest) cur.lines.push(rest);
         continue;
       }
     }
-    if (cur) cur.lines.push(line);   // всё остальное — продолжение текущего блока
+    if (cur) cur.lines.push(line);
   }
   return blocks;
 }
@@ -300,7 +288,6 @@ function parseBlock(block, wrapWidth) {
   if (!parts || parts.length !== 5) return null;
 
   const tidy = (s) => s.replace(/\s+/g, ' ').trim();
-  // Если делили по кавычкам, они уже сняты; иначе снимаем обрамляющие
   const fix = (s) => (byQuotes ? tidy(s) : unwrapQuotes(tidy(s)));
 
   const question = fix(parts[0]);
@@ -313,7 +300,7 @@ function parseBlock(block, wrapWidth) {
 /* --- Способ А: разделение по кавычкам --- */
 function splitByQuotes(text) {
   const segs = [];
-  let outside = '';          // текст вне кавычек (должен быть почти пустым)
+  let outside = '';
   let opener = null, closers = null, depth = 0, buf = '';
 
   for (const ch of text) {
@@ -321,7 +308,7 @@ function splitByQuotes(text) {
       if (QUOTE_PAIRS[ch]) { opener = ch; closers = QUOTE_PAIRS[ch]; depth = 1; buf = ''; }
       else outside += ch;
     } else if (ch === opener && opener !== closers) {
-      depth++; buf += ch;                                   // вложенная кавычка «внутри «так»»
+      depth++; buf += ch;
     } else if (closers.includes(ch)) {
       depth--;
       if (depth === 0) { segs.push(buf); closers = null; opener = null; }
@@ -331,16 +318,15 @@ function splitByQuotes(text) {
     }
   }
 
-  if (closers) return null;                                  // незакрытая кавычка
-  if (segs.length !== 5) return null;                        // нужно ровно 5 частей
-  if (outside.replace(/[\s\d.,;:()\-–—]/g, '').length > 10) return null; // слишком много текста вне кавычек
+  if (closers) return null;
+  if (segs.length !== 5) return null;
+  if (outside.replace(/[\s\d.,;:()\-–—]/g, '').length > 10) return null;
 
   return segs.map((s) => joinWrapped(s.split('\n')));
 }
 
 /* --- Способ Б: разделение по раскладке строк (если кавычек нет) --- */
 function splitByLayout(lines, wrapWidth) {
-  // Непустые строки + пометка «перед ней была пустая строка»
   const rows = [];
   let blank = false;
   for (const l of lines) {
@@ -350,7 +336,6 @@ function splitByLayout(lines, wrapWidth) {
   }
   if (rows.length < 5) return null;
 
-  // Б1. Если пустые строки делят блок ровно на 5 абзацев — это и есть вопрос + 4 варианта
   const groups = [];
   rows.forEach((r) => {
     if (r.blankBefore || !groups.length) groups.push([r.text]);
@@ -358,7 +343,6 @@ function splitByLayout(lines, wrapWidth) {
   });
   if (groups.length === 5) return groups.map((g) => joinWrapped(g));
 
-  // Б2. Иначе выбираем 4 самых «похожих на границу» места между строками
   const gaps = [];
   for (let i = 1; i < rows.length; i++) {
     gaps.push({ i, score: gapScore(rows[i - 1].text, rows[i].text, rows[i].blankBefore, wrapWidth) });
@@ -378,34 +362,30 @@ function splitByLayout(lines, wrapWidth) {
   return segs.map((s) => joinWrapped(s));
 }
 
-// Оценка: «здесь заканчивается часть (вопрос/вариант)». Чем выше балл — тем вероятнее граница
 function gapScore(prev, next, blankBefore, wrapWidth) {
   let s = 0;
-  if (blankBefore) s += 2;                                   // пустая строка между строками
+  if (blankBefore) s += 2;
 
   const ratio = prev.length / wrapWidth;
-  if (ratio < 0.6) s += 3;                                   // короткая строка — вероятно, конец части
+  if (ratio < 0.6) s += 3;
   else if (ratio < 0.8) s += 2;
-  else if (ratio >= 0.92) s -= 3;                            // строка «до упора» — вероятно, перенос
+  else if (ratio >= 0.92) s -= 3;
 
-  if (/\?$/.test(prev)) s += 2;                              // конец вопроса
+  if (/\?$/.test(prev)) s += 2;
   if (/:$/.test(prev)) s += 1;
-  if (/[.!;…)»”"]$/.test(prev)) s += 1;                      // законченное предложение
+  if (/[.!;…)»”"]$/.test(prev)) s += 1;
 
-  // Строка оборвалась на запятой, дефисе или предлоге/союзе — явный перенос
   if (/[,\-–—(]$/.test(prev) ||
       /(?:^|\s)(?:и|в|во|на|с|со|к|ко|по|от|до|из|за|для|что|как|или|а|но|не|о|об|у|the|of|and|to|in|a)$/i.test(prev)) {
     s -= 3;
   }
 
-  if (/^[a-zа-яё]/.test(next)) s -= 1;                       // следующая строка с маленькой буквы
-  else s += 1;                                               // с большой буквы / цифры
+  if (/^[a-zа-яё]/.test(next)) s -= 1;
+  else s += 1;
   return s;
 }
 
 /* ----- Вспомогательные функции ----- */
-
-// Склейка строк в одну: слова, перенесённые через дефис, собираются обратно
 function joinWrapped(parts) {
   let res = '';
   for (const p of parts.map((x) => x.trim()).filter(Boolean)) {
@@ -416,7 +396,6 @@ function joinWrapped(parts) {
   return res;
 }
 
-// Снимаем кавычки, только если ВЕСЬ текст обёрнут в пару («ТСО» и «ЕСО» останется как есть)
 function unwrapQuotes(s) {
   s = s.trim();
   const first = s[0], last = s[s.length - 1];
@@ -428,14 +407,12 @@ function unwrapQuotes(s) {
   return s;
 }
 
-// Убираем маркеры вариантов «1)», «2.», «A)», «б)». Инициалы вроде «А. С. Пушкин» не трогаем
 function stripOptionMarker(s) {
   return s.replace(/^(?:[1-4][.)]|[A-Da-dА-Гa-г]\))\s+/, '').trim();
 }
 
 /* ---------- 5. СОХРАНЕНИЕ / ЗАГРУЗКА ---------- */
 
-// Показываем блок «Последний тест сохранён»
 function renderSavedBox() {
   const saved = lsGet(LS.questions);
   const meta = lsGet(LS.meta);
@@ -458,7 +435,6 @@ function loadSaved() {
   updateStartAvailability();
 }
 
-// Лучший результат
 function renderBest() {
   const best = lsGet(LS.best);
   const el = $('best-line');
@@ -478,10 +454,10 @@ function saveBest(percent, score, total) {
   }
 }
 
-// Сохранение выбранных настроек
 function saveSettings() {
   lsSet(LS.settings, { count: $('count-select').value, mode: getMode() });
 }
+
 function restoreSettings() {
   const s = lsGet(LS.settings);
   if (!s) return;
@@ -500,21 +476,19 @@ function updateModeHint() {
     : 'Ответы «вслепую», идёт таймер (' + SECONDS_PER_QUESTION + ' сек. на вопрос), итоги — в конце.';
 }
 
-// Кнопка «Начать тест» активна только когда есть вопросы
 function updateStartAvailability() {
   $('start-btn').disabled = allQuestions.length === 0;
 }
 
 /* ---------- 6. СТАРТ ТЕСТА ---------- */
 
-// Собираем сессию: перемешиваем вопросы И варианты ответов
 function buildSession(sourceQuestions, mode, isRetry) {
   const prepared = shuffle(sourceQuestions).map((q) => ({
     id: q.id,
     question: q.question,
     correctAnswerText: q.correctAnswerText,
-    options: shuffle(q.options),      // Fisher-Yates: правильный ответ попадает на случайную позицию
-    userAnswer: null                  // текст выбранного ответа
+    options: shuffle(q.options),
+    userAnswer: null
   }));
   return { questions: prepared, index: 0, mode, isRetry, answered: false, selected: null };
 }
@@ -530,12 +504,10 @@ function startTest() {
   launch(buildSession(pool, getMode(), false));
 }
 
-// Запуск подготовленной сессии
 function launch(newSession) {
   session = newSession;
   showScreen('quiz');
 
-  // Таймер — только в режиме «Экзамен»
   stopTimer();
   if (session.mode === 'exam') {
     timeLeft = session.questions.length * SECONDS_PER_QUESTION;
@@ -557,13 +529,11 @@ function renderQuestion() {
   session.answered = false;
   session.selected = null;
 
-  // Прогресс
   $('progress-text').textContent = 'Вопрос ' + (session.index + 1) + ' из ' + total;
   $('progress-fill').style.width = (session.index / total * 100) + '%';
   $('q-number').textContent = 'Вопрос ' + (session.index + 1);
   $('q-text').textContent = q.question;
 
-  // Варианты ответов
   const box = $('options');
   box.innerHTML = '';
   q.options.forEach((opt, i) => {
@@ -579,14 +549,12 @@ function renderQuestion() {
     box.appendChild(btn);
   });
 
-  // Кнопка «Далее» заблокирована, пока не выбран ответ
   $('next-btn').disabled = true;
   $('next-label').textContent = session.index === total - 1 ? 'Завершить' : 'Следующий вопрос';
 
-  // Анимация появления вопроса
   const wrap = $('question-wrap');
   wrap.classList.remove('enter');
-  void wrap.offsetWidth;            // перезапуск CSS-анимации
+  void wrap.offsetWidth;
   wrap.classList.add('enter');
 }
 
@@ -596,7 +564,6 @@ function selectAnswer(i) {
   if (i < 0 || i >= buttons.length) return;
 
   if (session.mode === 'train') {
-    // ТРЕНИРОВКА: ответ фиксируется сразу, показываем верно/неверно
     if (session.answered) return;
     session.answered = true;
     q.userAnswer = q.options[i];
@@ -613,7 +580,6 @@ function selectAnswer(i) {
       }
     });
   } else {
-    // ЭКЗАМЕН: можно менять выбор до нажатия «Далее», верность не показывается
     session.answered = true;
     session.selected = i;
     q.userAnswer = q.options[i];
@@ -632,7 +598,6 @@ function nextQuestion() {
   }
 }
 
-// Горячие клавиши: 1–4 — выбор, Enter/Space — далее
 document.addEventListener('keydown', (e) => {
   if (!$('screen-quiz').classList.contains('active')) return;
   const tag = (e.target.tagName || '').toLowerCase();
@@ -653,7 +618,7 @@ function tick() {
   timeLeft--;
   updateTimerView();
   if (timeLeft <= 0) {
-    finishTest(true);   // время вышло
+    finishTest(true);
   }
 }
 function updateTimerView() {
@@ -675,7 +640,6 @@ function finishTest(timeout) {
   const score = total - wrongList.length;
   const percent = Math.round(score / total * 100);
 
-  // Статусный бейдж
   let text, cls;
   if (percent >= 90)      { text = 'Отлично!';          cls = 'great'; }
   else if (percent >= 75) { text = 'Очень хорошо';      cls = 'good';  }
@@ -694,7 +658,6 @@ function finishTest(timeout) {
   $('res-score').textContent = 'Верно: ' + score + ' из ' + total;
   $('res-extra').textContent = timeout ? 'Время вышло — неотвеченные вопросы засчитаны как ошибки.' : '';
 
-  // Лучший результат запоминаем только для обычных тестов (не «только ошибки»)
   if (!session.isRetry) saveBest(percent, score, total);
 
   renderReview(wrongList);
@@ -702,7 +665,6 @@ function finishTest(timeout) {
   showScreen('result');
 }
 
-// Разбор ошибок
 function renderReview(wrongList) {
   const list = $('review-list');
   list.innerHTML = '';
@@ -740,11 +702,9 @@ function renderReview(wrongList) {
   });
 }
 
-// «Перепройти только ошибки» — мини-тест из ошибочных вопросов
 function retryErrors() {
   const wrong = session.questions.filter((q) => q.userAnswer !== q.correctAnswerText);
   if (!wrong.length) return;
-  // Возвращаем исходный вид вопроса (правильный ответ на 1-й позиции) — buildSession заново всё перемешает
   const source = wrong.map((q) => ({
     id: q.id,
     question: q.question,
@@ -754,7 +714,6 @@ function retryErrors() {
   launch(buildSession(source, session.mode, true));
 }
 
-// «Начать заново» — тот же набор вопросов, новый случайный порядок и варианты
 function restartTest() {
   const source = session.questions.map((q) => ({
     id: q.id,
@@ -774,11 +733,9 @@ function goHome() {
 /* ---------- 10. ИНИЦИАЛИЗАЦИЯ ---------- */
 
 function init() {
-  // Тема
   applyTheme(document.documentElement.getAttribute('data-theme') || 'light');
   $('theme-toggle').addEventListener('click', toggleTheme);
 
-  // Вкладки PDF / Текст
   document.querySelectorAll('.tab').forEach((tab) => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
@@ -788,51 +745,42 @@ function init() {
     });
   });
 
-  // Выбор файла и Drag-and-Drop
   const dz = $('dropzone');
   $('file-input').addEventListener('change', (e) => {
     handleFile(e.target.files[0]);
-    e.target.value = '';   // позволяет выбрать тот же файл повторно
+    e.target.value = '';
   });
   ['dragenter', 'dragover'].forEach((ev) =>
     dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('dragover'); }));
   ['dragleave', 'drop'].forEach((ev) =>
     dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('dragover'); }));
   dz.addEventListener('drop', (e) => handleFile(e.dataTransfer.files[0]));
-  // Чтобы браузер не открывал PDF, если уронили мимо зоны
+
   window.addEventListener('dragover', (e) => e.preventDefault());
   window.addEventListener('drop', (e) => e.preventDefault());
 
-  // Текст
   $('parse-text-btn').addEventListener('click', handleText);
-
-  // Сохранённый тест
   $('load-saved-btn').addEventListener('click', loadSaved);
 
-  // Настройки
   document.querySelectorAll('input[name="mode"]').forEach((r) =>
     r.addEventListener('change', () => { updateModeHint(); saveSettings(); }));
   $('count-select').addEventListener('change', saveSettings);
 
-  // Кнопки теста
   $('start-btn').addEventListener('click', startTest);
   $('next-btn').addEventListener('click', nextQuestion);
   $('quit-btn').addEventListener('click', () => {
     if (confirm('Выйти из теста? Прогресс будет потерян.')) goHome();
   });
 
-  // Кнопки результатов
   $('retry-errors-btn').addEventListener('click', retryErrors);
   $('restart-btn').addEventListener('click', restartTest);
   $('home-btn').addEventListener('click', goHome);
 
-  // Восстановление данных из localStorage
   restoreSettings();
   renderSavedBox();
   renderBest();
   updateModeHint();
 
-  // Если есть сохранённый тест — подгружаем его сразу, можно начинать без повторной загрузки
   const saved = lsGet(LS.questions);
   if (saved && saved.length) {
     allQuestions = saved;
