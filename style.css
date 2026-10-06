@@ -1,7 +1,13 @@
 /* =========================================================
-   QuizGen — стили (включая шапку, модалку и переключатель)
+   QuizGen — стили
+   Структура:
+   1. Переменные (темы)   2. База   3. Компоненты
+   4. Стартовый экран     5. Тест   6. Результаты
+   7. Анимации            8. Адаптивность
    ========================================================= */
 
+/* ---------- 1. ПЕРЕМЕННЫЕ ТЕМ ----------
+   Чтобы поменять цвета — правьте значения здесь. */
 :root {
   --bg: #f6f7f9;
   --surface: #ffffff;
@@ -9,7 +15,7 @@
   --text: #1c1e21;
   --text-muted: #6b7280;
   --border: #e4e7ec;
-  --primary: #4f6df5;
+  --primary: #4f6df5;          /* основной акцент */
   --primary-hover: #3d58db;
   --primary-soft: rgba(79, 109, 245, 0.12);
   --success: #16a34a;
@@ -41,120 +47,350 @@
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
+/* ---------- 2. БАЗА ---------- */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+html { -webkit-text-size-adjust: 100%; }
+
 body {
-  font-family: 'Inter', sans-serif;
-  background: var(--bg); color: var(--text);
-  line-height: 1.5; min-height: 100vh; display: flex; flex-direction: column;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: background var(--transition), color var(--transition);
 }
 
-.container { width: 100%; max-width: 760px; margin: 0 auto; padding: 16px 16px 40px; flex: 1; }
+.container {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 16px 16px 40px;
+  flex: 1;
+}
+
 [hidden] { display: none !important; }
 
 /* ---------- Шапка ---------- */
 .app-header {
-  display: flex; align-items: center; justify-content: space-between;
-  max-width: 760px; width: 100%; margin: 0 auto; padding: 18px 16px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 18px 16px 4px;
 }
-.logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; }
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 700; font-size: 20px; letter-spacing: -0.02em;
+}
 .logo i { color: var(--primary); font-size: 22px; }
 
-.header-controls { display: flex; align-items: center; gap: 8px; }
-.lang-select {
-  padding: 6px 10px; border-radius: 10px; border: 1px solid var(--border);
-  background: var(--surface); color: var(--text); font-weight: 600; cursor: pointer;
-}
-
 .icon-btn {
-  width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border);
-  background: var(--surface); color: var(--text); cursor: pointer;
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 16px;
+  transition: var(--transition);
   display: inline-flex; align-items: center; justify-content: center;
 }
-.icon-btn.small { width: 34px; height: 34px; }
+.icon-btn:hover { background: var(--surface-2); transform: translateY(-1px); }
+.icon-btn.small { width: 34px; height: 34px; font-size: 14px; }
 
-/* ---------- Компоненты ---------- */
+/* ---------- 3. КОМПОНЕНТЫ ---------- */
 .card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); box-shadow: var(--shadow);
-  padding: 24px; margin-bottom: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  margin-bottom: 16px;
+  transition: background var(--transition), border-color var(--transition);
 }
-.title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
-.subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
+.title { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px; }
+.subtitle { color: var(--text-muted); font-size: 15px; margin-bottom: 20px; }
 .card-title { font-size: 17px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+.card-title i { color: var(--primary); }
 
+/* Кнопки */
 .btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 12px 20px; border-radius: var(--radius-sm); border: 1px solid transparent;
-  font-weight: 600; font-size: 15px; cursor: pointer; transition: var(--transition);
-  min-height: 46px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font: inherit; font-weight: 600; font-size: 15px;
+  cursor: pointer;
+  transition: var(--transition);
+  min-height: 48px;               /* крупная зона нажатия для смартфонов */
+  -webkit-tap-highlight-color: transparent;
 }
+.btn:active:not(:disabled) { transform: scale(0.97); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.btn-lg { width: 100%; min-height: 52px; }
+.btn-lg { width: 100%; font-size: 16px; min-height: 54px; }
+
 .btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+
 .btn-secondary { background: var(--primary-soft); color: var(--primary); }
+.btn-secondary:hover:not(:disabled) { filter: brightness(0.95); }
+
 .btn-ghost { background: transparent; border-color: var(--border); color: var(--text); }
-.text-danger { color: var(--danger); }
+.btn-ghost:hover:not(:disabled) { background: var(--surface-2); }
 
-/* Вкладки & Драг-н-дроп */
-.tabs { display: flex; gap: 6px; background: var(--surface-2); padding: 4px; border-radius: 14px; margin-bottom: 16px; }
-.tab { flex: 1; border: none; background: transparent; color: var(--text-muted); padding: 10px; border-radius: 10px; font-weight: 600; cursor: pointer; }
-.tab.active { background: var(--surface); color: var(--text); }
+/* Пульсация активной кнопки «Начать тест» */
+.pulse:not(:disabled) { animation: pulse 2.2s infinite; }
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 var(--primary-soft); }
+  70%  { box-shadow: 0 0 0 14px rgba(0,0,0,0); }
+  100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); }
+}
+
+/* ---------- 4. СТАРТОВЫЙ ЭКРАН ---------- */
+.screen { display: none; }
+.screen.active { display: block; animation: screenIn 0.4s ease both; }
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Вкладки */
+.tabs {
+  display: flex; gap: 6px;
+  background: var(--surface-2);
+  padding: 4px; border-radius: 14px;
+  margin-bottom: 16px;
+}
+.tab {
+  flex: 1; border: none; background: transparent; color: var(--text-muted);
+  padding: 10px 12px; border-radius: 10px;
+  font: inherit; font-weight: 600; font-size: 14px; cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
 .tab-panel { display: none; }
-.tab-panel.active { display: block; }
+.tab-panel.active { display: block; animation: screenIn 0.3s ease both; }
 
+/* Drag-and-Drop зона */
 .dropzone {
-  display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
-  border: 2px dashed var(--border); border-radius: var(--radius); padding: 36px 20px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; text-align: center;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 40px 20px;
+  cursor: pointer;
+  transition: var(--transition);
+  background: var(--surface-2);
 }
-.dropzone.dragover { border-color: var(--primary); background: var(--primary-soft); }
-.dz-icon { font-size: 36px; color: var(--primary); }
+.dropzone:hover, .dropzone.dragover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  transform: scale(1.01);
+}
+.dz-icon { font-size: 40px; color: var(--primary); margin-bottom: 6px; }
+.dropzone.dragover .dz-icon { animation: bounce 0.8s infinite; }
+@keyframes bounce { 50% { transform: translateY(-6px); } }
+.dz-title { font-weight: 600; font-size: 17px; }
+.dz-sub { color: var(--text-muted); font-size: 14px; }
 
+/* Текстовое поле */
 .textarea {
-  width: 100%; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);
-  background: var(--surface-2); color: var(--text); font-family: inherit; font-size: 14px;
+  width: 100%; resize: vertical;
+  padding: 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text);
+  font: inherit; font-size: 14px; line-height: 1.5;
+  margin-bottom: 12px; outline: none;
+  transition: var(--transition);
 }
+.textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
 
-.preview-bar {
-  margin-top: 14px; padding: 10px 14px; background: var(--primary-soft);
-  border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: space-between;
+/* Статус */
+.status {
+  margin-top: 14px; padding: 12px 14px;
+  border-radius: var(--radius-sm); font-size: 14px; font-weight: 500;
+  display: flex; align-items: center; gap: 10px;
+  animation: screenIn 0.3s ease both;
 }
+.status.ok    { background: var(--success-soft); color: var(--success); }
+.status.error { background: var(--danger-soft);  color: var(--danger); }
+.status.info  { background: var(--primary-soft); color: var(--primary); }
+
+/* Сохранённый тест */
+.saved-box {
+  margin-top: 14px; padding: 12px 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.saved-info { display: flex; align-items: center; gap: 12px; }
+.saved-info > i { color: var(--primary); font-size: 20px; }
+.saved-title { font-weight: 600; font-size: 14px; }
+.saved-meta { color: var(--text-muted); font-size: 13px; }
 
 /* Настройки */
-.field { margin-bottom: 16px; }
-.field > label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px; }
-.select { width: 100%; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface-2); color: var(--text); }
+.field { margin-bottom: 18px; }
+.field > label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 8px; }
+.select {
+  width: 100%; padding: 12px 14px; min-height: 48px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text);
+  font: inherit; font-size: 15px; outline: none; cursor: pointer;
+}
+.select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
 
-.segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--surface-2); padding: 4px; border-radius: 14px; }
+.segmented {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  background: var(--surface-2); padding: 4px; border-radius: 14px;
+}
 .segmented input { display: none; }
-.segmented label { text-align: center; padding: 10px; border-radius: 10px; font-weight: 600; cursor: pointer; color: var(--text-muted); }
-.segmented input:checked + label { background: var(--surface); color: var(--primary); }
+.segmented label {
+  text-align: center; padding: 12px 10px; border-radius: 10px;
+  font-weight: 600; font-size: 14px; cursor: pointer; color: var(--text-muted);
+  transition: var(--transition);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.segmented input:checked + label { background: var(--surface); color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+.hint { margin-top: 8px; font-size: 13px; color: var(--text-muted); }
+.best-line { margin-bottom: 14px; font-size: 14px; color: var(--text-muted); }
+.best-line b { color: var(--warning); }
 
-/* Тест */
-.quiz-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.progress-text { font-weight: 600; font-size: 14px; flex: 1; }
-.progress-bar { height: 8px; background: var(--surface-2); border-radius: 999px; margin-bottom: 20px; }
-.progress-fill { height: 100%; background: var(--primary); border-radius: 999px; transition: width 0.3s; }
+/* ---------- 5. ЭКРАН ТЕСТА ---------- */
+.quiz-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.progress-text { font-weight: 600; font-size: 14px; color: var(--text-muted); flex: 1; }
+.timer {
+  font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px;
+  padding: 6px 12px; border-radius: 999px; background: var(--surface-2);
+}
+.timer.warn { color: var(--danger); background: var(--danger-soft); animation: pulseText 1s infinite; }
+@keyframes pulseText { 50% { opacity: 0.55; } }
 
-.q-text { font-size: 20px; font-weight: 600; margin-bottom: 20px; }
+.progress-bar { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin-bottom: 24px; }
+.progress-fill {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, var(--primary), #8b5cf6);
+  border-radius: 999px; transition: width 0.4s ease;
+}
+
+.question-wrap.enter { animation: questionIn 0.35s ease both; }
+@keyframes questionIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.q-number { font-size: 13px; font-weight: 600; color: var(--primary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+.q-text { font-size: 21px; font-weight: 600; line-height: 1.4; margin-bottom: 22px; letter-spacing: -0.01em; word-wrap: break-word; }
+
 .options { display: flex; flex-direction: column; gap: 10px; }
 .option {
-  display: flex; align-items: center; gap: 12px; text-align: left; width: 100%; padding: 14px;
-  background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius-sm); font-size: 15px; cursor: pointer;
+  display: flex; align-items: center; gap: 14px; text-align: left;
+  width: 100%;
+  padding: 14px 16px; min-height: 58px;
+  background: var(--surface); color: var(--text);
+  border: 2px solid var(--border); border-radius: var(--radius-sm);
+  font: inherit; font-size: 15.5px; cursor: pointer;
+  transition: var(--transition);
+  -webkit-tap-highlight-color: transparent;
 }
-.option .num { width: 28px; height: 28px; border-radius: 8px; background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
+.option:hover:not(.locked) { border-color: var(--primary); background: var(--primary-soft); transform: translateX(3px); }
+.option .num {
+  flex: 0 0 30px; height: 30px; border-radius: 9px;
+  background: var(--surface-2); color: var(--text-muted);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; transition: var(--transition);
+}
+.option .label { flex: 1; word-wrap: break-word; overflow-wrap: anywhere; }
+.option .mark { font-size: 18px; opacity: 0; transition: var(--transition); }
+
+/* Режим «Экзамен»: выбранный вариант (без показа верности) */
 .option.selected { border-color: var(--primary); background: var(--primary-soft); }
-.option.correct { border-color: var(--success); background: var(--success-soft); }
-.option.wrong { border-color: var(--danger); background: var(--danger-soft); }
+.option.selected .num { background: var(--primary); color: #fff; }
 
-/* Модальное окно редактора */
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
-.modal-content { max-width: 650px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; }
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.modal-body { overflow-y: auto; flex: 1; padding-right: 6px; }
-.modal-q-item { border: 1px solid var(--border); padding: 12px; border-radius: 12px; margin-bottom: 12px; }
-.q-edit-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
-.opts-edit { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-.opt-edit-row { display: flex; align-items: center; gap: 8px; }
+/* Режим «Тренировка»: верно / неверно */
+.option.correct { border-color: var(--success); background: var(--success-soft); animation: pop 0.35s ease; }
+.option.correct .num { background: var(--success); color: #fff; }
+.option.correct .mark { opacity: 1; color: var(--success); }
+.option.wrong { border-color: var(--danger); background: var(--danger-soft); animation: shake 0.4s ease; }
+.option.wrong .num { background: var(--danger); color: #fff; }
+.option.wrong .mark { opacity: 1; color: var(--danger); }
+.option.locked { cursor: default; }
+.option.locked:not(.correct):not(.wrong) { opacity: 0.6; }
 
-.app-footer { text-align: center; color: var(--text-muted); font-size: 12px; padding: 20px; }
+@keyframes pop   { 50% { transform: scale(1.02); } }
+@keyframes shake { 20%,60% { transform: translateX(-5px); } 40%,80% { transform: translateX(5px); } }
+
+.quiz-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; }
+.keys-hint { color: var(--text-muted); font-size: 12.5px; }
+kbd {
+  background: var(--surface-2); border: 1px solid var(--border); border-bottom-width: 2px;
+  border-radius: 6px; padding: 1px 6px; font-family: inherit; font-size: 12px;
+}
+
+/* ---------- 6. РЕЗУЛЬТАТЫ ---------- */
+.result-card { text-align: center; }
+.ring {
+  --p: 0;                                   /* процент задаётся из JS */
+  --ring-color: var(--primary);
+  width: 160px; height: 160px; border-radius: 50%; margin: 0 auto 18px;
+  background: conic-gradient(var(--ring-color) calc(var(--p) * 1%), var(--surface-2) 0);
+  display: grid; place-items: center;
+  transition: --p 1s;
+}
+.ring-inner {
+  width: 128px; height: 128px; border-radius: 50%;
+  background: var(--surface); display: grid; place-items: center;
+  font-size: 34px; font-weight: 700; letter-spacing: -0.02em;
+}
+.badge {
+  display: inline-block; padding: 8px 18px; border-radius: 999px;
+  font-weight: 700; font-size: 15px; margin-bottom: 10px;
+  background: var(--primary-soft); color: var(--primary);
+}
+.badge.great { background: var(--success-soft); color: var(--success); }
+.badge.good  { background: var(--primary-soft); color: var(--primary); }
+.badge.mid   { background: rgba(217,119,6,0.14); color: var(--warning); }
+.badge.bad   { background: var(--danger-soft); color: var(--danger); }
+.res-score { font-size: 18px; font-weight: 600; }
+.res-extra { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+
+.result-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 24px; }
+
+.review-list { display: flex; flex-direction: column; gap: 14px; }
+.review-item {
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 16px; background: var(--surface);
+  animation: screenIn 0.4s ease both;
+}
+.review-q { font-weight: 600; margin-bottom: 12px; overflow-wrap: anywhere; }
+.review-q .idx { color: var(--text-muted); margin-right: 6px; }
+.review-ans { padding: 10px 12px; border-radius: 10px; font-size: 14.5px; margin-top: 8px; overflow-wrap: anywhere; }
+.review-ans small { display: block; font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; opacity: 0.85; }
+.review-ans.mine { background: var(--danger-soft); color: var(--danger); }
+.review-ans.right { background: var(--success-soft); color: var(--success); }
+.review-empty { text-align: center; color: var(--success); font-weight: 600; padding: 16px; }
+
+.app-footer { text-align: center; color: var(--text-muted); font-size: 12.5px; padding: 18px 16px 26px; }
+
+/* ---------- 8. АДАПТИВНОСТЬ ---------- */
+@media (max-width: 560px) {
+  .container { padding: 10px 12px 30px; }
+  .card { padding: 18px 16px; border-radius: 14px; }
+  .title { font-size: 22px; }
+  .q-text { font-size: 18.5px; }
+  .option { padding: 14px; font-size: 15px; }
+  .keys-hint { display: none; }                 /* на телефоне горячие клавиши не нужны */
+  .quiz-actions { justify-content: stretch; }
+  .quiz-actions .btn { width: 100%; }
+  .result-actions .btn { width: 100%; }
+  .dropzone { padding: 30px 14px; }
+}
+
+/* Уважение к настройке «уменьшить анимации» */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

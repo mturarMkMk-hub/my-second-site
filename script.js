@@ -1,173 +1,54 @@
 /* =========================================================
-   QuizGen — Мультиязычная версия (Исправленная)
+   QuizGen — логика приложения
+   Разделы:
+   0. Настройки и состояние   1. Утилиты        2. Тема
+   3. Загрузка PDF / текста   4. Парсер         5. Сохранение
+   6. Старт теста             7. Прохождение    8. Таймер
+   9. Результаты              10. Инициализация
    ========================================================= */
 
+/* ---------- 0. НАСТРОЙКИ И СОСТОЯНИЕ ---------- */
+
+// Секунд на один вопрос в режиме «Экзамен» (меняйте при желании)
 const SECONDS_PER_QUESTION = 60;
 
+// Ключи localStorage
 const LS = {
   theme: 'qg_theme',
-  lang: 'qg_lang',
-  questions: 'qg_questions',
-  meta: 'qg_meta',
-  best: 'qg_best',
-  settings: 'qg_settings'
+  questions: 'qg_questions',   // последний загруженный тест
+  meta: 'qg_meta',             // имя источника и дата
+  best: 'qg_best',             // лучший результат
+  settings: 'qg_settings'      // выбранные count / mode
 };
 
-const I18N = {
-  ru: {
-    mainTitle: 'Создайте тест из PDF или текста',
-    mainSubtitle: 'Формат: «1. Вопрос» и 4 варианта. Верный вариант можно отметить звёздочкой (*).',
-    tabPdf: 'PDF-файл',
-    tabText: 'Вставить текст',
-    dzTitle: 'Перетащите PDF сюда',
-    dzSub: 'или нажмите, чтобы выбрать файл',
-    btnParseText: 'Разобрать текст',
-    btnEditQuestions: 'Просмотр / Редактировать',
-    savedTitle: 'Последний тест сохранён',
-    btnLoad: 'Загрузить',
-    settingsTitle: 'Настройки теста',
-    countLabel: 'Количество вопросов',
-    countAll: 'Все',
-    modeLabel: 'Режим',
-    modeTrain: 'Тренировка',
-    modeExam: 'Экзамен',
-    modeTrainHint: 'Правильность ответа видна сразу после клика.',
-    modeExamHint: 'Ответы «вслепую», идёт таймер, итоги — в конце.',
-    btnStart: 'Начать тест',
-    btnRetryErrors: 'Только ошибки',
-    btnRestart: 'Заново',
-    btnHome: 'В меню',
-    reviewTitle: 'Разбор ошибок',
-    modalTitle: 'Редактирование вопросов',
-    btnSaveClose: 'Сохранить и закрыть',
-    footer: 'QuizGen · работает полностью в вашем браузере, файлы никуда не отправляются',
-    statusOk: 'Готово! Найдено вопросов: ',
-    statusErr: 'Вопросы не найдены. Проверьте формат.',
-    bestResult: 'Лучший результат: ',
-    questionText: 'Вопрос ',
-    fromText: ' из ',
-    nextQuestion: 'Следующий вопрос',
-    finishQuiz: 'Завершить',
-    yourAns: 'Твой ответ',
-    rightAns: 'Правильный ответ',
-    noErrors: 'Ошибок нет — идеальный результат!'
-  },
-  kk: {
-    mainTitle: 'PDF немесе мәтіннен тест жасаңыз',
-    mainSubtitle: 'Форматы: «1. Сұрақ» және 4 нұсқа. Дұрыс жауапты жұлдызшамен (*) белгілеуге болады.',
-    tabPdf: 'PDF файлы',
-    tabText: 'Мәтінді қою',
-    dzTitle: 'PDF файлын осы жерге сүйреңіз',
-    dzSub: 'немесе файлды таңдау үшін басыңыз',
-    btnParseText: 'Мәтінді талдау',
-    btnEditQuestions: 'Көру / Өңдеу',
-    savedTitle: 'Соңғы тест сақталды',
-    btnLoad: 'Жүктеу',
-    settingsTitle: 'Тест баптаулары',
-    countLabel: 'Сұрақтар саны',
-    countAll: 'Барлығы',
-    modeLabel: 'Режим',
-    modeTrain: 'Жаттығу',
-    modeExam: 'Емтихан',
-    modeTrainHint: 'Дұрыс жауап бірден көрсетіледі.',
-    modeExamHint: 'Жауаптар жасырын, таймер жүреді, нәтиже соңында.',
-    btnStart: 'Тестті бастау',
-    btnRetryErrors: 'Тек қателер',
-    btnRestart: 'Қайта бастау',
-    btnHome: 'Мәзірге',
-    reviewTitle: 'Қателермен жұмыс',
-    modalTitle: 'Сұрақтарды өңдеу',
-    btnSaveClose: 'Сақтау және жабу',
-    footer: 'QuizGen · толықтай браузеріңізде жұмыс істейді',
-    statusOk: 'Дайын! Табылған сұрақтар: ',
-    statusErr: 'Сұрақтар табылмады. Форматты тексеріңіз.',
-    bestResult: 'Үздік нәтиже: ',
-    questionText: 'Сұрақ ',
-    fromText: ' / ',
-    nextQuestion: 'Келесі сұрақ',
-    finishQuiz: 'Aяқтау',
-    yourAns: 'Сіздің жауабыңыз',
-    rightAns: 'Дұрыс жауап',
-    noErrors: 'Қателер жоқ — тамаша нәтиже!'
-  },
-  en: {
-    mainTitle: 'Create Quiz from PDF or Text',
-    mainSubtitle: 'Format: "1. Question" followed by 4 options. Mark correct answer with an asterisk (*).',
-    tabPdf: 'PDF File',
-    tabText: 'Paste Text',
-    dzTitle: 'Drag & drop PDF here',
-    dzSub: 'or click to browse file',
-    btnParseText: 'Parse Text',
-    btnEditQuestions: 'Preview / Edit',
-    savedTitle: 'Last test saved',
-    btnLoad: 'Load',
-    settingsTitle: 'Quiz Settings',
-    countLabel: 'Number of questions',
-    countAll: 'All',
-    modeLabel: 'Mode',
-    modeTrain: 'Practice',
-    modeExam: 'Exam',
-    modeTrainHint: 'Instant feedback after clicking.',
-    modeExamHint: 'Timed mode, answers revealed at the end.',
-    btnStart: 'Start Quiz',
-    btnRetryErrors: 'Retry Mistakes',
-    btnRestart: 'Restart',
-    btnHome: 'Home',
-    reviewTitle: 'Mistakes Review',
-    modalTitle: 'Edit Questions',
-    btnSaveClose: 'Save & Close',
-    footer: 'QuizGen · runs entirely in your browser',
-    statusOk: 'Done! Questions found: ',
-    statusErr: 'No questions found. Check format.',
-    bestResult: 'Best Result: ',
-    questionText: 'Question ',
-    fromText: ' of ',
-    nextQuestion: 'Next Question',
-    finishQuiz: 'Finish',
-    yourAns: 'Your answer',
-    rightAns: 'Correct answer',
-    noErrors: 'No mistakes — perfect score!'
-  }
-};
-
-let currentLang = 'ru';
-
+// Подключаем воркер PDF.js (нужен для разбора PDF)
 if (window.pdfjsLib) {
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 
+// Все вопросы, найденные в источнике: { id, question, options[], correctAnswerText }
 let allQuestions = [];
+
+// Текущая сессия теста
 let session = {
-  questions: [],
-  index: 0,
-  mode: 'train',
-  isRetry: false,
-  answered: false,
-  selected: null
+  questions: [],     // вопросы с уже перемешанными вариантами + userAnswer
+  index: 0,          // номер текущего вопроса
+  mode: 'train',     // 'train' | 'exam'
+  isRetry: false,    // true, если это «только ошибки»
+  answered: false,   // выбран ли ответ на текущем вопросе
+  selected: null     // индекс выбранного варианта
 };
 
-let timerId = null;
-let timeLeft = 0;
+let timerId = null;   // id интервала таймера
+let timeLeft = 0;     // оставшиеся секунды
 
+// Короткая функция для поиска элементов
 const $ = (id) => document.getElementById(id);
 
-function setLanguage(lang) {
-  if (!I18N[lang]) lang = 'ru';
-  currentLang = lang;
-  lsSet(LS.lang, lang);
-  $('lang-select').value = lang;
+/* ---------- 1. УТИЛИТЫ ---------- */
 
-  document.querySelectorAll('[data-i18n]').forEach((el) => {
-    const key = el.getAttribute('data-i18n');
-    if (I18N[lang][key]) el.textContent = I18N[lang][key];
-  });
-
-  updateModeHint();
-  renderBest();
-  renderSavedBox();
-}
-
+// Алгоритм Fisher-Yates — честное перемешивание массива (возвращает копию)
 function shuffle(arr) {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
@@ -177,22 +58,25 @@ function shuffle(arr) {
   return a;
 }
 
+// Показ нужного экрана (start / quiz / result)
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
   $('screen-' + name).classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// Сообщение о статусе: type = 'ok' | 'error' | 'info'
 function setStatus(text, type) {
   const el = $('status');
   if (!text) { el.hidden = true; return; }
   const icons = { ok: 'fa-circle-check', error: 'fa-circle-exclamation', info: 'fa-spinner fa-spin' };
   el.className = 'status ' + type;
   el.innerHTML = '<i class="fa-solid ' + icons[type] + '"></i><span></span>';
-  el.querySelector('span').textContent = text;
+  el.querySelector('span').textContent = text;   // textContent — защита от XSS
   el.hidden = false;
 }
 
+// Безопасная работа с localStorage (в приватном режиме может падать)
 function lsGet(key) {
   try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }
 }
@@ -200,10 +84,13 @@ function lsSet(key, val) {
   try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
 }
 
+// Формат времени мм:сс
 function fmtTime(sec) {
   const m = Math.floor(sec / 60), s = sec % 60;
   return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
 }
+
+/* ---------- 2. ТЕМА ---------- */
 
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
@@ -218,19 +105,9 @@ function toggleTheme() {
   applyTheme(cur === 'dark' ? 'light' : 'dark');
 }
 
-function speakQuestion() {
-  if (!('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
+/* ---------- 3. ЗАГРУЗКА PDF / ТЕКСТА ---------- */
 
-  const q = session.questions[session.index];
-  const langCode = currentLang === 'kk' ? 'kk-KZ' : currentLang === 'en' ? 'en-US' : 'ru-RU';
-
-  const textToRead = q.question + '. ' + q.options.map((opt, idx) => (idx + 1) + ': ' + opt).join('. ');
-  const utterance = new SpeechSynthesisUtterance(textToRead);
-  utterance.lang = langCode;
-  window.speechSynthesis.speak(utterance);
-}
-
+// Извлекаем текст из PDF, сохраняя переносы строк (по координате Y)
 async function extractTextFromPdf(file) {
   const buffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
@@ -242,20 +119,24 @@ async function extractTextFromPdf(file) {
 
     let line = '';
     let lastY = null;
-    let lastEnd = null;
+    let lastEnd = null;   // правый край предыдущего фрагмента
 
     for (const item of content.items) {
       if (!item.str) continue;
       const x = item.transform[4];
       const y = item.transform[5];
 
+      // Если Y заметно изменился — это новая строка
       if (lastY !== null && Math.abs(y - lastY) > 2) {
         lines.push(line);
+        // Большой зазор между строками = новый абзац → пустая строка-разделитель
         if (Math.abs(y - lastY) > (item.height || 10) * 1.7) lines.push('');
         line = '';
         lastEnd = null;
       }
-      if (line && lastEnd !== null && x - lastEnd > 1 && !line.endsWith(' ') && !item.str.startsWith(' ')) {
+      // Если между фрагментами есть зазор — добавляем пробел
+      if (line && lastEnd !== null && x - lastEnd > 1 &&
+          !line.endsWith(' ') && !item.str.startsWith(' ')) {
         line += ' ';
       }
       line += item.str;
@@ -263,82 +144,116 @@ async function extractTextFromPdf(file) {
       lastEnd = x + (item.width || 0);
     }
     if (line) lines.push(line);
-    lines.push('');
+    lines.push('');   // разделитель между страницами
   }
   return lines.join('\n');
 }
 
+// Обработка выбранного PDF-файла
 async function handleFile(file) {
   if (!file) return;
-  if (!window.pdfjsLib) { setStatus('PDF.js Error', 'error'); return; }
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    setStatus('Пожалуйста, выберите файл в формате PDF.', 'error');
+    return;
+  }
+  if (!window.pdfjsLib) {
+    setStatus('Не удалось загрузить PDF.js. Проверьте интернет-соединение.', 'error');
+    return;
+  }
   try {
-    setStatus('...', 'info');
+    setStatus('Читаю PDF…', 'info');
     const text = await extractTextFromPdf(file);
     applyParsed(parseQuestions(text), file.name);
   } catch (err) {
-    setStatus(err.message, 'error');
+    console.error(err);
+    setStatus('Ошибка чтения PDF: ' + (err.message || err), 'error');
   }
 }
 
+// Обработка вставленного текста
 function handleText() {
   const text = $('text-input').value;
-  if (!text.trim()) return;
-  applyParsed(parseQuestions(text), 'Text input');
+  if (!text.trim()) { setStatus('Поле пустое — вставьте текст с вопросами.', 'error'); return; }
+  applyParsed(parseQuestions(text), 'Вставленный текст');
 }
 
+// Применяем результат парсинга: сохраняем и разблокируем кнопку «Начать»
 function applyParsed(questions, sourceName) {
   if (!questions.length) {
     allQuestions = [];
     updateStartAvailability();
-    setStatus(I18N[currentLang].statusErr, 'error');
-    $('preview-bar').hidden = true;
+    setStatus('Вопросы не найдены. Проверьте формат: «1. Вопрос» и 4 варианта.', 'error');
     return;
   }
   allQuestions = questions;
   lsSet(LS.questions, questions);
   lsSet(LS.meta, { name: sourceName, date: new Date().toISOString(), count: questions.length });
-  
-  setStatus(I18N[currentLang].statusOk + questions.length, 'ok');
-  $('parsed-count-text').textContent = I18N[currentLang].statusOk + questions.length;
-  $('preview-bar').hidden = false;
-
+  setStatus('Готово! Найдено вопросов: ' + questions.length, 'ok');
   updateStartAvailability();
   renderSavedBox();
 }
 
-const START_RE = /^(?:["«“„]?)\s*(?:сұрақ|question|вопрос)?\s*(\d{1,4})\s*[-.)]\s*(.*)$/i;
-const PAGE_NOISE_RE = /^(?:[-–—]\s*\d+\s*[-–—]|(?:страница|бет|стр\.?|page)\s*\d+)/i;
+/* ---------- 4. ПАРСЕР (версия с поддержкой переносов строк) ---------- */
 
+// Начало вопроса: «12.» или «12)». Не срабатывает на «3.5 кг»
+const START_RE = /^(["«“„]?)\s*(\d{1,4})\s*[.)](?!\d)\s*(.*)$/;
+
+// Строки-мусор от PDF
+const PAGE_NOISE_RE = /^(?:[-–—]\s*\d+\s*[-–—]|(?:страница|стр\.?|page)\s*\d+(?:\s*(?:из|of)\s*\d+)?)$/i;
+
+// Открывающая кавычка → допустимые закрывающие
+const QUOTE_PAIRS = { '"': '"', '«': '»', '“': '”', '„': '“”' };
+
+/* ----- Главная функция ----- */
 function parseQuestions(raw) {
   const lines = prepareLines(raw);
+  const wrapWidth = estimateWrapWidth(lines);
   const blocks = splitIntoBlocks(lines);
-  const result = [];
 
+  const result = [];
   for (const block of blocks) {
-    const parsed = parseBlock(block);
-    if (parsed) {
-      result.push({
-        id: result.length + 1,
-        question: parsed.question,
-        options: parsed.options,
-        correctAnswerText: parsed.correctAnswerText
-      });
+    const parsed = parseBlock(block, wrapWidth);
+    if (!parsed) {
+      console.warn('Вопрос №' + block.num + ' пропущен: не удалось выделить вопрос и 4 варианта.');
+      continue;
     }
+    result.push({
+      id: result.length + 1,
+      question: parsed.question,
+      options: parsed.options,
+      correctAnswerText: parsed.options[0]   // первый вариант в исходнике — правильный
+    });
   }
   return result;
 }
 
+/* ----- Шаг 1. Подготовка строк ----- */
 function prepareLines(raw) {
   const out = [];
-  raw.replace(/\r/g, '').split('\n').forEach((l) => {
-    const t = l.replace(/\s+/g, ' ').trim();
-    if (PAGE_NOISE_RE.test(t)) return;
-    if (!t) { if (out.length && out[out.length - 1] !== '') out.push(''); return; }
-    out.push(t);
-  });
+  raw
+    .replace(/\r/g, '')
+    .replace(/[\u00A0\u2007\u202F]/g, ' ')
+    .replace(/[\u00AD\u200B-\u200D\uFEFF]/g, '')
+    .split('\n')
+    .forEach((l) => {
+      const t = l.replace(/\s+/g, ' ').trim();
+      if (PAGE_NOISE_RE.test(t)) return;
+      if (!t) {
+        if (out.length && out[out.length - 1] !== '') out.push('');
+        return;
+      }
+      out.push(t);
+    });
   return out;
 }
 
+function estimateWrapWidth(lines) {
+  const lens = lines.filter(Boolean).map((l) => l.length).sort((a, b) => a - b);
+  if (!lens.length) return 60;
+  return Math.max(lens[Math.floor(lens.length * 0.95)] || 0, 20);
+}
+
+/* ----- Шаг 2. Разбиение на блоки по нумерации ----- */
 function splitIntoBlocks(lines) {
   const blocks = [];
   let cur = null;
@@ -347,12 +262,17 @@ function splitIntoBlocks(lines) {
   for (const line of lines) {
     const m = line.match(START_RE);
     if (m) {
-      const num = parseInt(m[1], 10);
-      if (!cur || num === lastNum + 1 || num > lastNum) {
+      const num = parseInt(m[2], 10);
+      const filled = cur ? cur.lines.filter(Boolean).length : 0;
+      const isNext = num === lastNum + 1;
+      const isSkip = num > lastNum && filled >= 5;
+
+      if (!cur || isNext || isSkip) {
         cur = { num, lines: [] };
         blocks.push(cur);
         lastNum = num;
-        if (m[2].trim()) cur.lines.push(m[2].trim());
+        const rest = (m[1] + m[3]).trim();
+        if (rest) cur.lines.push(rest);
         continue;
       }
     }
@@ -361,95 +281,146 @@ function splitIntoBlocks(lines) {
   return blocks;
 }
 
-function parseBlock(block) {
-  const rawLines = block.lines.filter(Boolean);
-  if (rawLines.length < 2) return null;
+/* ----- Шаг 3. Разбор одного блока ----- */
+function parseBlock(block, wrapWidth) {
+  const byQuotes = splitByQuotes(block.lines.join('\n'));
+  const parts = byQuotes || splitByLayout(block.lines, wrapWidth);
+  if (!parts || parts.length !== 5) return null;
 
-  const question = rawLines[0];
-  let options = rawLines.slice(1).map(s => stripOptionMarker(s));
+  const tidy = (s) => s.replace(/\s+/g, ' ').trim();
+  const fix = (s) => (byQuotes ? tidy(s) : unwrapQuotes(tidy(s)));
 
-  if (options.length < 2) return null;
+  const question = fix(parts[0]);
+  const options = parts.slice(1).map((o) => stripOptionMarker(fix(o)));
 
-  let correctIndex = 0;
-  options = options.map((opt, idx) => {
-    if (opt.startsWith('*')) {
-      correctIndex = idx;
-      return opt.replace(/^\*\s*/, '');
+  if (!question || options.some((o) => !o)) return null;
+  return { question, options };
+}
+
+/* --- Способ А: разделение по кавычкам --- */
+function splitByQuotes(text) {
+  const segs = [];
+  let outside = '';
+  let opener = null, closers = null, depth = 0, buf = '';
+
+  for (const ch of text) {
+    if (!closers) {
+      if (QUOTE_PAIRS[ch]) { opener = ch; closers = QUOTE_PAIRS[ch]; depth = 1; buf = ''; }
+      else outside += ch;
+    } else if (ch === opener && opener !== closers) {
+      depth++; buf += ch;
+    } else if (closers.includes(ch)) {
+      depth--;
+      if (depth === 0) { segs.push(buf); closers = null; opener = null; }
+      else buf += ch;
+    } else {
+      buf += ch;
     }
-    return opt;
-  });
+  }
 
-  return {
-    question,
-    options,
-    correctAnswerText: options[correctIndex]
-  };
+  if (closers) return null;
+  if (segs.length !== 5) return null;
+  if (outside.replace(/[\s\d.,;:()\-–—]/g, '').length > 10) return null;
+
+  return segs.map((s) => joinWrapped(s.split('\n')));
+}
+
+/* --- Способ Б: разделение по раскладке строк (если кавычек нет) --- */
+function splitByLayout(lines, wrapWidth) {
+  const rows = [];
+  let blank = false;
+  for (const l of lines) {
+    if (!l) { blank = true; continue; }
+    rows.push({ text: l, blankBefore: blank && rows.length > 0 });
+    blank = false;
+  }
+  if (rows.length < 5) return null;
+
+  const groups = [];
+  rows.forEach((r) => {
+    if (r.blankBefore || !groups.length) groups.push([r.text]);
+    else groups[groups.length - 1].push(r.text);
+  });
+  if (groups.length === 5) return groups.map((g) => joinWrapped(g));
+
+  const gaps = [];
+  for (let i = 1; i < rows.length; i++) {
+    gaps.push({ i, score: gapScore(rows[i - 1].text, rows[i].text, rows[i].blankBefore, wrapWidth) });
+  }
+  const cuts = gaps
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .slice(0, 4)
+    .map((g) => g.i)
+    .sort((a, b) => a - b);
+
+  const segs = [];
+  let start = 0;
+  [...cuts, rows.length].forEach((end) => {
+    segs.push(rows.slice(start, end).map((r) => r.text));
+    start = end;
+  });
+  return segs.map((s) => joinWrapped(s));
+}
+
+function gapScore(prev, next, blankBefore, wrapWidth) {
+  let s = 0;
+  if (blankBefore) s += 2;
+
+  const ratio = prev.length / wrapWidth;
+  if (ratio < 0.6) s += 3;
+  else if (ratio < 0.8) s += 2;
+  else if (ratio >= 0.92) s -= 3;
+
+  if (/\?$/.test(prev)) s += 2;
+  if (/:$/.test(prev)) s += 1;
+  if (/[.!;…)»”"]$/.test(prev)) s += 1;
+
+  if (/[,\-–—(]$/.test(prev) ||
+      /(?:^|\s)(?:и|в|во|на|с|со|к|ко|по|от|до|из|за|для|что|как|или|а|но|не|о|об|у|the|of|and|to|in|a)$/i.test(prev)) {
+    s -= 3;
+  }
+
+  if (/^[a-zа-яё]/.test(next)) s -= 1;
+  else s += 1;
+  return s;
+}
+
+/* ----- Вспомогательные функции ----- */
+function joinWrapped(parts) {
+  let res = '';
+  for (const p of parts.map((x) => x.trim()).filter(Boolean)) {
+    if (!res) res = p;
+    else if (/[A-Za-zА-Яа-яЁё]-$/.test(res) && /^[a-zа-яё]/.test(p)) res = res.slice(0, -1) + p;
+    else res += ' ' + p;
+  }
+  return res;
+}
+
+function unwrapQuotes(s) {
+  s = s.trim();
+  const first = s[0], last = s[s.length - 1];
+  const closers = QUOTE_PAIRS[first];
+  if (closers && s.length > 1 && closers.includes(last)) {
+    const inner = s.slice(1, -1);
+    if (!inner.includes(first) && !closers.includes(inner.slice(-1))) return inner.trim();
+  }
+  return s;
 }
 
 function stripOptionMarker(s) {
-  return s.replace(/^(?:\*?\s*)(?:[1-9][0-9]?[.)]|[A-Da-dА-Гa-г])[.)]\s+/, '').trim();
+  return s.replace(/^(?:[1-4][.)]|[A-Da-dА-Гa-г]\))\s+/, '').trim();
 }
 
-function openPreviewModal() {
-  const container = $('preview-list');
-  container.innerHTML = '';
-
-  allQuestions.forEach((q, idx) => {
-    const item = document.createElement('div');
-    item.className = 'modal-q-item';
-    item.innerHTML = `
-      <div class="q-edit-header">
-        <b>№ ${idx + 1}</b>
-        <button class="btn btn-ghost small text-danger" onclick="deleteQuestion(${idx})"><i class="fa-solid fa-trash"></i></button>
-      </div>
-      <input type="text" class="textarea q-input" value="${escapeHtml(q.question)}" onchange="updateQText(${idx}, this.value)">
-      <div class="opts-edit">
-        ${q.options.map((opt, oIdx) => `
-          <div class="opt-edit-row">
-            <input type="radio" name="correct_${idx}" ${opt === q.correctAnswerText ? 'checked' : ''} onchange="setCorrectOpt(${idx},${oIdx})">
-            <input type="text" class="textarea opt-input" value="${escapeHtml(opt)}" onchange="updateOptText(${idx},${oIdx}, this.value)">
-          </div>
-        `).join('')}
-      </div>
-    `;
-    container.appendChild(item);
-  });
-
-  $('modal-preview').hidden = false;
-}
-
-function escapeHtml(str) {
-  return str.replace(/"/g, '&quot;');
-}
-
-function closePreviewModal() {
-  $('modal-preview').hidden = true;
-  lsSet(LS.questions, allQuestions);
-  updateStartAvailability();
-}
-
-function deleteQuestion(idx) {
-  allQuestions.splice(idx, 1);
-  openPreviewModal();
-}
-
-function updateQText(idx, val) { allQuestions[idx].question = val; }
-function updateOptText(idx, oIdx, val) {
-  const isCorrect = allQuestions[idx].options[oIdx] === allQuestions[idx].correctAnswerText;
-  allQuestions[idx].options[oIdx] = val;
-  if (isCorrect) allQuestions[idx].correctAnswerText = val;
-}
-function setCorrectOpt(idx, oIdx) {
-  allQuestions[idx].correctAnswerText = allQuestions[idx].options[oIdx];
-}
+/* ---------- 5. СОХРАНЕНИЕ / ЗАГРУЗКА ---------- */
 
 function renderSavedBox() {
   const saved = lsGet(LS.questions);
   const meta = lsGet(LS.meta);
   const box = $('saved-box');
   if (saved && saved.length) {
-    const d = meta && meta.date ? new Date(meta.date).toLocaleDateString() : '';
-    $('saved-meta').textContent = (meta && meta.name ? meta.name + ' · ' : '') + saved.length + ' вопр. ' + d;
+    const d = meta && meta.date ? new Date(meta.date).toLocaleString('ru-RU') : '';
+    $('saved-meta').textContent =
+      (meta && meta.name ? meta.name + ' · ' : '') + saved.length + ' вопр.' + (d ? ' · ' + d : '');
     box.hidden = false;
   } else {
     box.hidden = true;
@@ -460,9 +431,7 @@ function loadSaved() {
   const saved = lsGet(LS.questions);
   if (!saved || !saved.length) return;
   allQuestions = saved;
-  setStatus(I18N[currentLang].statusOk + saved.length, 'ok');
-  $('preview-bar').hidden = false;
-  $('parsed-count-text').textContent = I18N[currentLang].statusOk + saved.length;
+  setStatus('Загружен сохранённый тест: ' + saved.length + ' вопросов', 'ok');
   updateStartAvailability();
 }
 
@@ -470,7 +439,8 @@ function renderBest() {
   const best = lsGet(LS.best);
   const el = $('best-line');
   if (best) {
-    el.innerHTML = '<i class="fa-solid fa-trophy"></i> ' + I18N[currentLang].bestResult + '<b>' + best.percent + '%</b>';
+    el.innerHTML = '<i class="fa-solid fa-trophy"></i> Лучший результат: <b>' +
+      best.percent + '%</b> (' + best.score + ' из ' + best.total + ')';
     el.hidden = false;
   } else {
     el.hidden = true;
@@ -480,50 +450,65 @@ function renderBest() {
 function saveBest(percent, score, total) {
   const best = lsGet(LS.best);
   if (!best || percent > best.percent) {
-    lsSet(LS.best, { percent, score, total });
+    lsSet(LS.best, { percent, score, total, date: new Date().toISOString() });
   }
 }
 
-function updateModeHint() {
-  const mode = getMode();
-  $('mode-hint').textContent = mode === 'train' ? I18N[currentLang].modeTrainHint : I18N[currentLang].modeExamHint;
+function saveSettings() {
+  lsSet(LS.settings, { count: $('count-select').value, mode: getMode() });
+}
+
+function restoreSettings() {
+  const s = lsGet(LS.settings);
+  if (!s) return;
+  if (s.count) $('count-select').value = s.count;
+  if (s.mode) { const r = document.querySelector('input[name="mode"][value="' + s.mode + '"]'); if (r) r.checked = true; }
+  updateModeHint();
 }
 
 function getMode() {
   return document.querySelector('input[name="mode"]:checked').value;
 }
 
+function updateModeHint() {
+  $('mode-hint').textContent = getMode() === 'train'
+    ? 'Правильность ответа видна сразу после клика.'
+    : 'Ответы «вслепую», идёт таймер (' + SECONDS_PER_QUESTION + ' сек. на вопрос), итоги — в конце.';
+}
+
 function updateStartAvailability() {
   $('start-btn').disabled = allQuestions.length === 0;
 }
 
+/* ---------- 6. СТАРТ ТЕСТА ---------- */
+
+function buildSession(sourceQuestions, mode, isRetry) {
+  const prepared = shuffle(sourceQuestions).map((q) => ({
+    id: q.id,
+    question: q.question,
+    correctAnswerText: q.correctAnswerText,
+    options: shuffle(q.options),
+    userAnswer: null
+  }));
+  return { questions: prepared, index: 0, mode, isRetry, answered: false, selected: null };
+}
+
 function startTest() {
   if (!allQuestions.length) return;
+  saveSettings();
+
   const countVal = $('count-select').value;
   let pool = shuffle(allQuestions);
   if (countVal !== 'all') pool = pool.slice(0, Math.min(parseInt(countVal, 10), pool.length));
 
-  launch({
-    questions: pool.map(q => ({
-      id: q.id,
-      question: q.question,
-      correctAnswerText: q.correctAnswerText,
-      options: shuffle(q.options),
-      userAnswer: null
-    })),
-    index: 0,
-    mode: getMode(),
-    isRetry: false,
-    answered: false,
-    selected: null
-  });
+  launch(buildSession(pool, getMode(), false));
 }
 
 function launch(newSession) {
   session = newSession;
   showScreen('quiz');
-  stopTimer();
 
+  stopTimer();
   if (session.mode === 'exam') {
     timeLeft = session.questions.length * SECONDS_PER_QUESTION;
     $('timer').hidden = false;
@@ -535,6 +520,8 @@ function launch(newSession) {
   renderQuestion();
 }
 
+/* ---------- 7. ПРОХОЖДЕНИЕ ТЕСТА ---------- */
+
 function renderQuestion() {
   const q = session.questions[session.index];
   const total = session.questions.length;
@@ -542,9 +529,10 @@ function renderQuestion() {
   session.answered = false;
   session.selected = null;
 
-  $('progress-text').textContent = I18N[currentLang].questionText + (session.index + 1) + I18N[currentLang].fromText + total;
+  $('progress-text').textContent = 'Вопрос ' + (session.index + 1) + ' из ' + total;
   $('progress-fill').style.width = (session.index / total * 100) + '%';
-  $('q-number').textContent = I18N[currentLang].questionText + (session.index + 1);$('q-text').textContent = q.question;
+  $('q-number').textContent = 'Вопрос ' + (session.index + 1);
+  $('q-text').textContent = q.question;
 
   const box = $('options');
   box.innerHTML = '';
@@ -552,19 +540,28 @@ function renderQuestion() {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'option';
-    btn.innerHTML = `<span class="num">${i + 1}</span><span class="label"></span><i class="fa-solid mark"></i>`;
+    btn.innerHTML =
+      '<span class="num">' + (i + 1) + '</span>' +
+      '<span class="label"></span>' +
+      '<i class="fa-solid mark"></i>';
     btn.querySelector('.label').textContent = opt;
     btn.addEventListener('click', () => selectAnswer(i));
     box.appendChild(btn);
   });
 
   $('next-btn').disabled = true;
-  $('next-label').textContent = session.index === total - 1 ? I18N[currentLang].finishQuiz : I18N[currentLang].nextQuestion;
+  $('next-label').textContent = session.index === total - 1 ? 'Завершить' : 'Следующий вопрос';
+
+  const wrap = $('question-wrap');
+  wrap.classList.remove('enter');
+  void wrap.offsetWidth;
+  wrap.classList.add('enter');
 }
 
 function selectAnswer(i) {
   const q = session.questions[session.index];
   const buttons = $('options').querySelectorAll('.option');
+  if (i < 0 || i >= buttons.length) return;
 
   if (session.mode === 'train') {
     if (session.answered) return;
@@ -584,6 +581,7 @@ function selectAnswer(i) {
     });
   } else {
     session.answered = true;
+    session.selected = i;
     q.userAnswer = q.options[i];
     buttons.forEach((b, idx) => b.classList.toggle('selected', idx === i));
   }
@@ -600,17 +598,38 @@ function nextQuestion() {
   }
 }
 
+document.addEventListener('keydown', (e) => {
+  if (!$('screen-quiz').classList.contains('active')) return;
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'textarea' || tag === 'input' || tag === 'select') return;
+
+  if (e.key >= '1' && e.key <= '4') {
+    e.preventDefault();
+    selectAnswer(parseInt(e.key, 10) - 1);
+  } else if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    nextQuestion();
+  }
+});
+
+/* ---------- 8. ТАЙМЕР ---------- */
+
 function tick() {
   timeLeft--;
   updateTimerView();
-  if (timeLeft <= 0) finishTest(true);
+  if (timeLeft <= 0) {
+    finishTest(true);
+  }
 }
 function updateTimerView() {
-  $('timer-value').textContent = fmtTime(Math.max(timeLeft, 0));$('timer').classList.toggle('warn', timeLeft <= 30);
+  $('timer-value').textContent = fmtTime(Math.max(timeLeft, 0));
+  $('timer').classList.toggle('warn', timeLeft <= 30);
 }
 function stopTimer() {
   if (timerId) { clearInterval(timerId); timerId = null; }
 }
+
+/* ---------- 9. РЕЗУЛЬТАТЫ ---------- */
 
 function finishTest(timeout) {
   stopTimer();
@@ -621,10 +640,23 @@ function finishTest(timeout) {
   const score = total - wrongList.length;
   const percent = Math.round(score / total * 100);
 
+  let text, cls;
+  if (percent >= 90)      { text = 'Отлично!';          cls = 'great'; }
+  else if (percent >= 75) { text = 'Очень хорошо';      cls = 'good';  }
+  else if (percent >= 50) { text = 'Хорошая попытка';   cls = 'mid';   }
+  else                    { text = 'Нужно повторить';   cls = 'bad';   }
+
+  const ringColors = { great: 'var(--success)', good: 'var(--primary)', mid: 'var(--warning)', bad: 'var(--danger)' };
   const ring = $('ring');
+  ring.style.setProperty('--ring-color', ringColors[cls]);
   ring.style.setProperty('--p', percent);
 
-  $('res-percent').textContent = percent + '\%';$('res-score').textContent = score + ' / ' + total;
+  $('res-percent').textContent = percent + '%';
+  const badge = $('res-badge');
+  badge.textContent = text;
+  badge.className = 'badge ' + cls;
+  $('res-score').textContent = 'Верно: ' + score + ' из ' + total;
+  $('res-extra').textContent = timeout ? 'Время вышло — неотвеченные вопросы засчитаны как ошибки.' : '';
 
   if (!session.isRetry) saveBest(percent, score, total);
 
@@ -638,20 +670,58 @@ function renderReview(wrongList) {
   list.innerHTML = '';
 
   if (!wrongList.length) {
-    list.innerHTML = `<div class="review-empty"><i class="fa-solid fa-party-horn"></i> ${I18N[currentLang].noErrors}</div>`;
+    list.innerHTML = '<div class="review-empty"><i class="fa-solid fa-party-horn"></i> Ошибок нет — идеальный результат!</div>';
     return;
   }
 
   wrongList.forEach((q, n) => {
     const item = document.createElement('div');
     item.className = 'review-item';
-    item.innerHTML = `
-      <div class="review-q"><b>${n + 1}.</b> ${escapeHtml(q.question)}</div>
-      <div class="review-ans mine"><small>${I18N[currentLang].yourAns}</small>${escapeHtml(q.userAnswer || '—')}</div>
-      <div class="review-ans right"><small>${I18N[currentLang].rightAns}</small>${escapeHtml(q.correctAnswerText)}</div>
-    `;
+    item.style.animationDelay = Math.min(n * 0.04, 0.4) + 's';
+
+    const qEl = document.createElement('div');
+    qEl.className = 'review-q';
+    const idx = document.createElement('span');
+    idx.className = 'idx';
+    idx.textContent = (n + 1) + '.';
+    qEl.appendChild(idx);
+    qEl.appendChild(document.createTextNode(q.question));
+
+    const mine = document.createElement('div');
+    mine.className = 'review-ans mine';
+    mine.innerHTML = '<small>Твой ответ</small><span></span>';
+    mine.querySelector('span').textContent = q.userAnswer === null ? '— нет ответа —' : q.userAnswer;
+
+    const right = document.createElement('div');
+    right.className = 'review-ans right';
+    right.innerHTML = '<small>Правильный ответ</small><span></span>';
+    right.querySelector('span').textContent = q.correctAnswerText;
+
+    item.append(qEl, mine, right);
     list.appendChild(item);
   });
+}
+
+function retryErrors() {
+  const wrong = session.questions.filter((q) => q.userAnswer !== q.correctAnswerText);
+  if (!wrong.length) return;
+  const source = wrong.map((q) => ({
+    id: q.id,
+    question: q.question,
+    correctAnswerText: q.correctAnswerText,
+    options: [q.correctAnswerText].concat(q.options.filter((o) => o !== q.correctAnswerText))
+  }));
+  launch(buildSession(source, session.mode, true));
+}
+
+function restartTest() {
+  const source = session.questions.map((q) => ({
+    id: q.id,
+    question: q.question,
+    correctAnswerText: q.correctAnswerText,
+    options: q.options
+  }));
+  launch(buildSession(source, session.mode, session.isRetry));
 }
 
 function goHome() {
@@ -660,13 +730,11 @@ function goHome() {
   showScreen('start');
 }
 
-function init() {
-  applyTheme(lsGet(LS.theme) || 'light');
-  $('theme-toggle').addEventListener('click', toggleTheme);
+/* ---------- 10. ИНИЦИАЛИЗАЦИЯ ---------- */
 
-  const savedLang = lsGet(LS.lang) || 'ru';
-  setLanguage(savedLang);
-  $('lang-select').addEventListener('change', (e) => setLanguage(e.target.value));
+function init() {
+  applyTheme(document.documentElement.getAttribute('data-theme') || 'light');
+  $('theme-toggle').addEventListener('click', toggleTheme);
 
   document.querySelectorAll('.tab').forEach((tab) => {
     tab.addEventListener('click', () => {
@@ -677,32 +745,41 @@ function init() {
     });
   });
 
-  const dz = $('dropzone');$('file-input').addEventListener('change', (e) => { handleFile(e.target.files[0]); e.target.value = ''; });
-  ['dragenter', 'dragover'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('dragover'); }));
-  ['dragleave', 'drop'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('dragover'); }));
+  const dz = $('dropzone');
+  $('file-input').addEventListener('change', (e) => {
+    handleFile(e.target.files[0]);
+    e.target.value = '';
+  });
+  ['dragenter', 'dragover'].forEach((ev) =>
+    dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('dragover'); }));
+  ['dragleave', 'drop'].forEach((ev) =>
+    dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('dragover'); }));
   dz.addEventListener('drop', (e) => handleFile(e.dataTransfer.files[0]));
 
+  window.addEventListener('dragover', (e) => e.preventDefault());
+  window.addEventListener('drop', (e) => e.preventDefault());
+
   $('parse-text-btn').addEventListener('click', handleText);
-  $('load-saved-btn').addEventListener('click', loadSaved);$('open-preview-btn').addEventListener('click', openPreviewModal);
-  $('close-modal-btn').addEventListener('click', closePreviewModal);$('save-preview-btn').addEventListener('click', closePreviewModal);
+  $('load-saved-btn').addEventListener('click', loadSaved);
 
-  document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener('change', updateModeHint));
+  document.querySelectorAll('input[name="mode"]').forEach((r) =>
+    r.addEventListener('change', () => { updateModeHint(); saveSettings(); }));
+  $('count-select').addEventListener('change', saveSettings);
 
-  $('start-btn').addEventListener('click', startTest);$('next-btn').addEventListener('click', nextQuestion);
-  $('tts-btn').addEventListener('click', speakQuestion);$('quit-btn').addEventListener('click', () => { if (confirm('Exit?')) goHome(); });
-
-  $('retry-errors-btn').addEventListener('click', () => {
-    const wrong = session.questions.filter((q) => q.userAnswer !== q.correctAnswerText);
-    launch({
-      questions: wrong.map(q => ({ ...q, options: shuffle(q.options), userAnswer: null })),
-      index: 0, mode: session.mode, isRetry: true, answered: false, selected: null
-    });
+  $('start-btn').addEventListener('click', startTest);
+  $('next-btn').addEventListener('click', nextQuestion);
+  $('quit-btn').addEventListener('click', () => {
+    if (confirm('Выйти из теста? Прогресс будет потерян.')) goHome();
   });
 
-  $('restart-btn').addEventListener('click', startTest);$('home-btn').addEventListener('click', goHome);
+  $('retry-errors-btn').addEventListener('click', retryErrors);
+  $('restart-btn').addEventListener('click', restartTest);
+  $('home-btn').addEventListener('click', goHome);
 
+  restoreSettings();
   renderSavedBox();
   renderBest();
+  updateModeHint();
 
   const saved = lsGet(LS.questions);
   if (saved && saved.length) {
