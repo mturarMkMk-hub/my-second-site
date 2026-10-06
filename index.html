@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuizGen — тесты из PDF и текста</title>
+
+  <!-- Шрифт Inter (Google Fonts) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Иконки Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Наши стили -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Применяем сохранённую тему ДО отрисовки, чтобы не было "мигания" -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('qg_theme');
+        if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- ===== Шапка ===== -->
+  <header class="app-header">
+    <div class="logo">
+      <i class="fa-solid fa-graduation-cap"></i>
+      <span>QuizGen</span>
+    </div>
+    <button id="theme-toggle" class="icon-btn" aria-label="Переключить тему" title="Тёмная / светлая тема">
+      <i class="fa-solid fa-moon"></i>
+    </button>
+  </header>
+
+  <main class="container">
+
+    <!-- ===================================================== -->
+    <!-- ЭКРАН 1: СТАРТОВЫЙ                                     -->
+    <!-- ===================================================== -->
+    <section id="screen-start" class="screen active">
+
+      <div class="card">
+        <h1 class="title">Создайте тест из PDF или текста</h1>
+        <p class="subtitle">
+          Формат: «1. Вопрос» и далее 4 варианта, каждый с новой строки.
+          Первый вариант в исходнике — всегда правильный, при тесте варианты перемешиваются.
+        </p>
+
+        <!-- Вкладки: PDF / Текст -->
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="pdf" role="tab"><i class="fa-solid fa-file-pdf"></i> PDF-файл</button>
+          <button class="tab" data-tab="text" role="tab"><i class="fa-solid fa-align-left"></i> Вставить текст</button>
+        </div>
+
+        <!-- Вкладка PDF: зона Drag-and-Drop -->
+        <div id="tab-pdf" class="tab-panel active">
+          <label id="dropzone" class="dropzone" for="file-input">
+            <i class="fa-solid fa-cloud-arrow-up dz-icon"></i>
+            <div class="dz-title">Перетащите PDF сюда</div>
+            <div class="dz-sub">или нажмите, чтобы выбрать файл</div>
+            <input type="file" id="file-input" accept="application/pdf,.pdf" hidden>
+          </label>
+        </div>
+
+        <!-- Вкладка Текст -->
+        <div id="tab-text" class="tab-panel">
+          <textarea id="text-input" class="textarea" rows="10"
+            placeholder='1. "Текст вопроса"&#10;"Правильный вариант"&#10;"Вариант 2"&#10;"Вариант 3"&#10;"Вариант 4"&#10;&#10;2. ...'></textarea>
+          <button id="parse-text-btn" class="btn btn-secondary">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Разобрать текст
+          </button>
+        </div>
+
+        <!-- Статус загрузки / ошибки -->
+        <div id="status" class="status" hidden></div>
+
+        <!-- Сохранённый тест из localStorage -->
+        <div id="saved-box" class="saved-box" hidden>
+          <div class="saved-info">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <div>
+              <div class="saved-title">Последний тест сохранён</div>
+              <div class="saved-meta" id="saved-meta"></div>
+            </div>
+          </div>
+          <button id="load-saved-btn" class="btn btn-ghost">Загрузить</button>
+        </div>
+      </div>
+
+      <!-- Настройки теста -->
+      <div class="card" id="settings-card">
+        <h2 class="card-title"><i class="fa-solid fa-sliders"></i> Настройки теста</h2>
+
+        <div class="field">
+          <label for="count-select">Количество вопросов</label>
+          <select id="count-select" class="select">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="all">Все</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Режим</label>
+          <div class="segmented">
+            <input type="radio" name="mode" id="mode-train" value="train" checked>
+            <label for="mode-train"><i class="fa-solid fa-dumbbell"></i> Тренировка</label>
+            <input type="radio" name="mode" id="mode-exam" value="exam">
+            <label for="mode-exam"><i class="fa-solid fa-stopwatch"></i> Экзамен</label>
+          </div>
+          <p class="hint" id="mode-hint">Правильность ответа видна сразу после клика.</p>
+        </div>
+
+        <div class="best-line" id="best-line" hidden></div>
+
+        <button id="start-btn" class="btn btn-primary btn-lg pulse" disabled>
+          <i class="fa-solid fa-play"></i> Начать тест
+        </button>
+      </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <!-- ЭКРАН 2: ПРОХОЖДЕНИЕ ТЕСТА                             -->
+    <!-- ===================================================== -->
+    <section id="screen-quiz" class="screen">
+      <div class="card quiz-card">
+
+        <div class="quiz-top">
+          <div class="progress-text" id="progress-text">Вопрос 1 из 10</div>
+          <div class="timer" id="timer" hidden><i class="fa-regular fa-clock"></i> <span id="timer-value">00:00</span></div>
+          <button id="quit-btn" class="icon-btn small" title="Выйти в меню" aria-label="Выйти"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+
+        <div class="question-wrap" id="question-wrap">
+          <div class="q-number" id="q-number">Вопрос 1</div>
+          <h2 class="q-text" id="q-text"></h2>
+          <div class="options" id="options"></div>
+        </div>
+
+        <div class="quiz-actions">
+          <div class="keys-hint"><kbd>1</kbd>–<kbd>4</kbd> выбор &nbsp; <kbd>Enter</kbd> далее</div>
+          <button id="next-btn" class="btn btn-primary" disabled>
+            <span id="next-label">Следующий вопрос</span> <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <!-- ЭКРАН 3: РЕЗУЛЬТАТЫ                                    -->
+    <!-- ===================================================== -->
+    <section id="screen-result" class="screen">
+      <div class="card result-card">
+        <div class="ring" id="ring"><div class="ring-inner"><span id="res-percent">0%</span></div></div>
+        <div class="badge" id="res-badge">Результат</div>
+        <div class="res-score" id="res-score"></div>
+        <div class="res-extra" id="res-extra"></div>
+
+        <div class="result-actions">
+          <button id="retry-errors-btn" class="btn btn-secondary"><i class="fa-solid fa-rotate-left"></i> Перепройти только ошибки</button>
+          <button id="restart-btn" class="btn btn-primary"><i class="fa-solid fa-arrows-rotate"></i> Начать заново</button>
+          <button id="home-btn" class="btn btn-ghost"><i class="fa-solid fa-house"></i> В меню</button>
+        </div>
+      </div>
+
+      <div class="card" id="review-card">
+        <h2 class="card-title"><i class="fa-solid fa-triangle-exclamation"></i> Разбор ошибок</h2>
+        <div id="review-list" class="review-list"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">QuizGen · работает полностью в вашем браузере, файлы никуда не отправляются</footer>
+
+  <!-- PDF.js (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- Наша логика -->
+  <script src="script.js"></script>
+</body>
+</html>
