@@ -1,8 +1,6 @@
 /* =========================================================
-   QuizGen — Мультиязычная версия с Редактором и Озвучкой
+   QuizGen — Мультиязычная версия (Исправленная)
    ========================================================= */
-
-/* ---------- 0. НАСТРОЙКИ И ЯЗЫКИ ---------- */
 
 const SECONDS_PER_QUESTION = 60;
 
@@ -154,8 +152,6 @@ let timeLeft = 0;
 
 const $ = (id) => document.getElementById(id);
 
-/* ---------- 1. ИНТЕРНАЦИОНАЛИЗАЦИЯ (i18n) ---------- */
-
 function setLanguage(lang) {
   if (!I18N[lang]) lang = 'ru';
   currentLang = lang;
@@ -171,8 +167,6 @@ function setLanguage(lang) {
   renderBest();
   renderSavedBox();
 }
-
-/* ---------- 2. УТИЛИТЫ И ТЕМА ---------- */
 
 function shuffle(arr) {
   const a = arr.slice();
@@ -224,8 +218,6 @@ function toggleTheme() {
   applyTheme(cur === 'dark' ? 'light' : 'dark');
 }
 
-/* ---------- 3. ОЗВУЧКА (Text-to-Speech) ---------- */
-
 function speakQuestion() {
   if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
@@ -238,8 +230,6 @@ function speakQuestion() {
   utterance.lang = langCode;
   window.speechSynthesis.speak(utterance);
 }
-
-/* ---------- 4. ЗАГРУЗКА И ПАРСИНГ PDF ---------- */
 
 async function extractTextFromPdf(file) {
   const buffer = await file.arrayBuffer();
@@ -316,9 +306,6 @@ function applyParsed(questions, sourceName) {
   renderSavedBox();
 }
 
-/* ---------- 5. УМНЫЙ ПАРСЕР (RU/KK/EN + Звёздочка *) ---------- */
-
-// Нумерация: 1., 1), 1-сұрақ:
 const START_RE = /^(?:["«“„]?)\s*(?:сұрақ|question|вопрос)?\s*(\d{1,4})\s*[-.)]\s*(.*)$/i;
 const PAGE_NOISE_RE = /^(?:[-–—]\s*\d+\s*[-–—]|(?:страница|бет|стр\.?|page)\s*\d+)/i;
 
@@ -383,7 +370,6 @@ function parseBlock(block) {
 
   if (options.length < 2) return null;
 
-  // Ищем правильный ответ по звёздочке (*)
   let correctIndex = 0;
   options = options.map((opt, idx) => {
     if (opt.startsWith('*')) {
@@ -401,11 +387,8 @@ function parseBlock(block) {
 }
 
 function stripOptionMarker(s) {
-  // Поддержка маркёров вида A), B), A., 1), 1.
-  return s.replace(/^(?:\*?\s*)(?:[1-9][0-9]?[.)]|[A-Da-dА-Гa-гӘ-Іә-і][.)])\s+/, '').trim();
+  return s.replace(/^(?:\*?\s*)(?:[1-9][0-9]?[.)]|[A-Da-dА-Гa-г])[.)]\s+/, '').trim();
 }
-
-/* ---------- 6. МОДАЛЬНЫЙ РЕДАКТОР ВОПРОСОВ ---------- */
 
 function openPreviewModal() {
   const container = $('preview-list');
@@ -460,8 +443,6 @@ function setCorrectOpt(idx, oIdx) {
   allQuestions[idx].correctAnswerText = allQuestions[idx].options[oIdx];
 }
 
-/* ---------- 7. СОХРАНЕНИЕ / НАСТРОЙКИ ---------- */
-
 function renderSavedBox() {
   const saved = lsGet(LS.questions);
   const meta = lsGet(LS.meta);
@@ -515,8 +496,6 @@ function getMode() {
 function updateStartAvailability() {
   $('start-btn').disabled = allQuestions.length === 0;
 }
-
-/* ---------- 8. ТЕСТИРОВАНИЕ И ТАЙМЕР ---------- */
 
 function startTest() {
   if (!allQuestions.length) return;
@@ -633,8 +612,6 @@ function stopTimer() {
   if (timerId) { clearInterval(timerId); timerId = null; }
 }
 
-/* ---------- 9. РЕЗУЛЬТАТЫ ---------- */
-
 function finishTest(timeout) {
   stopTimer();
   $('progress-fill').style.width = '100%';
@@ -682,8 +659,6 @@ function goHome() {
   renderBest();
   showScreen('start');
 }
-
-/* ---------- 10. ИНИЦИАЛИЗАЦИЯ ---------- */
 
 function init() {
   applyTheme(lsGet(LS.theme) || 'light');
